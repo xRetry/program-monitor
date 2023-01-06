@@ -7,49 +7,67 @@ import (
 
 func createTestProgram(cmd string) *Program {
     program := Program{
-        name: "Test Program",
-        cmdStart: cmd,
-        cmdStatus: cmd,
+        Name: "Test Program",
+        CmdStart: cmd,
+        CmdStatus: cmd,
+        Status: nil,
     }
     return &program
 }
 
-func TestCheckStatus(t *testing.T) {
-    program := createTestProgram("ls")
-    ok := program.CheckStatus()
-    if !ok {
-        t.Error("One word command resulted in an error!")
-    }
-
-    program = createTestProgram("echo test")
-    ok = program.CheckStatus()
-    if !ok {
-        t.Error("Two word command resulted an error!")
-    }
-
-    program = createTestProgram("dfasdfasdf")
-    ok = program.CheckStatus()
-    if ok {
-        t.Error("Wrong command did not result in an error!")
-    }
-}
 
 func TestStartProgram(t *testing.T) {
     program := createTestProgram("ls")
-    ok := program.Start()
-    if !ok {
+    program.Check(true)
+    if program.Status != nil {
         t.Error("One word command resulted in an error!")
     }
 
     program = createTestProgram("echo test")
-    ok = program.Start()
-    if !ok {
+    program.Start()
+    if program.Status != nil {
         t.Error("Two word command resulted an error!")
     }
 
     program = createTestProgram("dfasdfasdf")
-    ok = program.Start()
-    if ok {
-        t.Error("Wrong command did not result in an error!")
+    program.Start()
+    if program.Status.Type != RETURN_ERROR {
+        t.Error("Wrong command did not result in an return error!")
+    }
+
+    program = createTestProgram("")
+    program.Start()
+    if program.Status.Type != PARSING_ERROR {
+        t.Error("Wrong command did not result in an parsing error!")
     }
 }
+
+func TestCheckStatus(t *testing.T) {
+    program := createTestProgram("ls")
+    program.Check(true)
+    if program.Status != nil {
+        t.Error("One word command resulted in an error!")
+    }
+
+    program = createTestProgram("echo test")
+    program.Check(true)
+    if program.Status != nil {
+        t.Error("Two word command resulted an error!")
+    }
+
+    program = createTestProgram("dfasdfasdf")
+    program.Check(true)
+    if program.Status.Type != RETURN_ERROR {
+        t.Error("Wrong command did not result in an return error!")
+    }
+
+    program = createTestProgram("")
+    program.Check(true)
+    if program.Status.Type != PARSING_ERROR {
+        t.Error("Wrong command did not result in an parsing error!")
+    }
+}
+
+//func TestCheckAll(t *testing.T) {
+//    store :- ProgramStore{}
+//}

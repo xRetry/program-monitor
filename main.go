@@ -9,9 +9,10 @@ import (
 )
 
 type Program struct {
-    name string
-    cmdStart string
-    cmdStatus string
+    Name string
+    CmdStart string
+    CmdStatus string
+    Status *ExecError
 }
 
      
@@ -26,37 +27,38 @@ const (
 )
 
 
-func (p Program) CheckStatus() bool {
-    log.Printf("[%s] Checking status\n", p.name)
-    err := execConsoleCommand(p.cmdStatus)
+func (p *Program) Check(startIfDown bool) {
+    log.Printf("[%s] Checking status\n",p.Name)
+    err := execConsoleCommand(p.CmdStatus)
     if err == nil {
-        log.Printf("[%s] Status OK\n", p.name)
-        return true
+        log.Printf("[%s] Status OK\n", p.Name)
+    } else if startIfDown && err.Type == RETURN_ERROR {
+        p.Start()
+        return
+    } else {
+        log.Printf("[%s] %s\n", p.Name, err.Err)
     }
 
-    log.Printf("[%s] %s\n", p.name, err.Err)
-
-    if err.Type == RETURN_ERROR {
-        return p.Start() 
-    }
-
-    return false
+    p.Status = err
 }
 
-func (p Program) Start() bool {
-    log.Printf("[%s] Starting program\n", p.name)
-    err := execConsoleCommand(p.cmdStart)
+
+func (p *Program) Start() {
+    log.Printf("[%s] Starting program\n", p.Name)
+    err := execConsoleCommand(p.CmdStart)
     if err != nil {
-        log.Printf("[%s] %s\n", p.name, err.Err)
-        return false
+        log.Printf("[%s] %s\n", p.Name, err.Err)
+    } else {
+        log.Printf("[%s] Program started\n", p.Name)
     }
-    log.Printf("[%s] Program started\n", p.name)
-    return true
+
+    p.Status = err
 }
+
 
 func execConsoleCommand(command string) *ExecError {
     args := strings.Split(command, " ")
-    if len(args) < 1 {
+    if len(args) < 1 || args[0] == "" {
         return &ExecError{
             errors.New("The command has to be at least one word!"),
             PARSING_ERROR,
@@ -74,6 +76,29 @@ func execConsoleCommand(command string) *ExecError {
 
     return nil
 }
+
+
+type ProgramControl struct {
+    programs []Program
+}
+
+func (c *ProgramControl) AddProgram(newProgram Program) {
+    c.programs = append(c.programs, newProgram)
+}
+
+func (c *ProgramControl) CheckAll() {
+    for i, _ := range c.programs {
+        c.programs[i].Check(false)
+    }
+}
+
+func (c *ProgramControl) StartAll() {
+    for i, _ := range c.programs {
+        c.programs[i].Check(true)
+    }
+}
+
+
 
 func main() {
     // If the file doesn't exist, create it or append to the file
